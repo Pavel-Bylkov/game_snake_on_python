@@ -42,11 +42,39 @@ box = play.new_box(
         border_color="blue", border_width=2
     )
 
+# Спрайты в списке - тело
+body = []
+
 # спрайт для отображения очков
 display_score = play.new_text(
         words=("SCORE: %0.3d" % score), x=670, y=280, angle=0, font=None, font_size=40,
         color='black', transparency=100
     )
+
+
+def body_append():
+    body.append(
+        play.new_box(
+            color='light yellow', x=800, y=400, width=30, height=30,
+            border_color="blue", border_width=2
+        )
+    )
+
+
+def body_move(index, pos):
+    current_pos_body = body[index].x, body[index].y
+    body[index].x, body[index].y = pos
+    return current_pos_body
+
+
+def is_snake_body():
+    for b in body:
+        if b.x == box.x and b.y == box.y:
+            return True
+    return False
+
+# Todo Сделать чтобы могла откусить хвост
+
 
 # Блок который работает один раз на старте и не повторяется
 @play.when_program_starts
@@ -60,7 +88,14 @@ def do():
 async def move_box():
     """Асинхронная функция - перемещает голову и хвост
         """
+    current_pos = box.x, box.y
     box.move(STEP)
+    if is_snake_body():
+        print("GAME OVER")
+    n = 0
+    while len(body) > n:
+        current_pos = body_move(n, current_pos)
+        n += 1
 
     if SHIFT:
         await play.timer(seconds=0.01)
@@ -79,6 +114,7 @@ async def eat_control():
         score += 1
         display_score.words = "SCORE: %0.3d" % score  # обновляем значение на экране
         eat.hide()
+        body_append()
         old_x = eat.x
         old_y = eat.y
         x = play.random_number(lowest=-13, highest=26) * 30 + 5
@@ -89,7 +125,7 @@ async def eat_control():
         eat.go_to(x=x, y=y)
         eat.show()
 
-    await play.timer(seconds=SPEED/2)
+    await play.timer(seconds=SPEED/100)
 
 
 @play.when_key_pressed('up', 'w', 'down', 's', 'right', 'd', 'left', 'a', 'enter')
