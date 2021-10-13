@@ -14,6 +14,7 @@ STEP = 30  # шаг сетки в пикселях
 SPEED = 0.5  # пауза меньше = скорость выше, пауза больше = скорость меньше
 SHIFT = 0  # ускорение
 score = 0  # для подсчета очков
+TIMER = 5 * 60  # 5 min
 
 def net(step):
     """ Рисуем сетку для игры c шагом step"""
@@ -50,6 +51,11 @@ display_score = play.new_text(
         words=("SCORE: %0.3d" % score), x=670, y=280, angle=0, font=None, font_size=40,
         color='black', transparency=100
     )
+display_timer = play.new_text(
+        words=("TIME: %0.2d:%0.2d" % ((TIMER // 60), (TIMER % 60))),
+        x=-300, y=280, angle=0, font=None, font_size=40,
+        color='black', transparency=100
+    )
 
 
 def body_append():
@@ -68,12 +74,23 @@ def body_move(index, pos):
 
 
 def is_snake_body():
-    for b in body:
-        if b.x == box.x and b.y == box.y:
-            return True
-    return False
+    """Проверяет произошло ли столкновение с хвостом возвращает номер тела или -1"""
+    for index in range(len(body)):
+        if body[index].x == box.x and body[index].y == box.y:
+            return index
+    return -1
 
-# Todo Сделать чтобы могла откусить хвост
+
+def eating_body():
+    global score
+
+    index = is_snake_body()
+    if index > -1:
+        while len(body) > index:
+            tmp = body.pop()
+            play.all_sprites.remove(tmp)
+            score -= 1
+        display_score.words = "SCORE: %0.3d" % score
 
 
 # Блок который работает один раз на старте и не повторяется
@@ -90,8 +107,7 @@ async def move_box():
         """
     current_pos = box.x, box.y
     box.move(STEP)
-    if is_snake_body():
-        print("GAME OVER")
+    eating_body()
     n = 0
     while len(body) > n:
         current_pos = body_move(n, current_pos)
@@ -101,6 +117,21 @@ async def move_box():
         await play.timer(seconds=0.01)
     else:
         await play.timer(seconds=SPEED)
+
+
+@play.repeat_forever
+async def time_control():
+    global TIMER
+
+    if TIMER > -1:
+        minute = TIMER // 60
+        seconds = TIMER % 60
+        display_timer.words = "TIME: %0.2d:%0.2d" % (minute, seconds)
+        TIMER -= 1
+    else:
+        print("GameOver")
+
+    await play.timer(seconds=1)
 
 
 @play.repeat_forever
