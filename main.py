@@ -33,9 +33,10 @@ def net(step):
 
 
 # создаем спрайт - еда
-eat = play.new_image(
-        image='eat.png', x=96, y=15, angle=0, size=4, transparency=100
-    )
+apples = [
+    play.new_image(
+        image='eat.png', x=96, y=15, angle=0, size=4, transparency=100)
+    ]
 
 # создаем спрайт - голова змейки
 box = play.new_box(
@@ -133,28 +134,48 @@ async def time_control():
 
     await play.timer(seconds=1)
 
+# ToDo Улучшить производительность функции
+def is_space_clear(x, y):
+    """Проверяет по указанным координатам - занято метсто или свободно"""
+    clear_space = True
+    for obj in play.all_sprites:
+        if obj.x == x and obj.y == y:
+            clear_space = False
+    return clear_space
+
+
+@play.repeat_forever
+async def new_apple():
+    """Добавляет яблоки на экран"""
+    x = play.random_number(lowest=-13, highest=26) * 30 + 5
+    y = play.random_number(lowest=-17, highest=9) * 30 + 15
+    while not is_space_clear(x, y):
+        x = play.random_number(lowest=-12, highest=26) * 30 + 5
+        y = play.random_number(lowest=-16, highest=9) * 30 + 15
+
+    apples.append(
+        play.new_image(
+            image='eat.png', x=x, y=y, angle=0, size=4, transparency=100)
+    )
+
+    await play.timer(seconds=5)
+
 
 @play.repeat_forever
 async def eat_control():
-    """Асинхронная функция - следит за касанием головы еды - и перемещает
-    после касания на новое случайное место
+    """Асинхронная функция - следит за касанием головы еды - и удаляет из списка
+    яблок съеденное
     """
     global score
 
-    if eat.is_touching(box):
-        score += 1
-        display_score.words = "SCORE: %0.3d" % score  # обновляем значение на экране
-        eat.hide()
-        body_append()
-        old_x = eat.x
-        old_y = eat.y
-        x = play.random_number(lowest=-13, highest=26) * 30 + 5
-        y = play.random_number(lowest=-17, highest=9) * 30 + 15
-        while old_y == y and old_x == x:
-            x = play.random_number(lowest=-12, highest=26) * 30 + 5
-            y = play.random_number(lowest=-16, highest=9) * 30 + 15
-        eat.go_to(x=x, y=y)
-        eat.show()
+    for eat in apples:
+        if eat.is_touching(box):
+            score += 1
+            display_score.words = "SCORE: %0.3d" % score  # обновляем значение на экране
+            eat.hide()
+            apples.remove(eat)
+            play.all_sprites.remove(eat)
+            body_append()
 
     await play.timer(seconds=SPEED/100)
 
