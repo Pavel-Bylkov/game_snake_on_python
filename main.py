@@ -14,7 +14,8 @@ STEP = 30  # шаг сетки в пикселях
 SPEED = 0.5  # пауза меньше = скорость выше, пауза больше = скорость меньше
 SHIFT = 0  # ускорение
 score = 0  # для подсчета очков
-TIMER = 5 * 60  # 5 min
+TIMER = 0.5 * 60  # 5 min
+RUN = True  # переменная состояние игры
 
 def net(step):
     """ Рисуем сетку для игры c шагом step"""
@@ -44,8 +45,13 @@ box = play.new_box(
         border_color="blue", border_width=2
     )
 
+
+gameover = play.new_image(
+        image='gameover.jpeg', x=200, y=-150, angle=0, size=80, transparency=100)
+gameover.hide()
+
 # Спрайты в списке - тело
-body = []
+bodies = []
 
 # спрайт для отображения очков
 display_score = play.new_text(
@@ -60,7 +66,7 @@ display_timer = play.new_text(
 
 
 def body_append():
-    body.append(
+    bodies.append(
         play.new_box(
             color='light yellow', x=800, y=400, width=30, height=30,
             border_color="blue", border_width=2
@@ -69,15 +75,15 @@ def body_append():
 
 
 def body_move(index, pos):
-    current_pos_body = body[index].x, body[index].y
-    body[index].x, body[index].y = pos
+    current_pos_body = bodies[index].x, bodies[index].y
+    bodies[index].x, bodies[index].y = pos
     return current_pos_body
 
 
 def is_snake_body():
     """Проверяет произошло ли столкновение с хвостом возвращает номер тела или -1"""
-    for index in range(len(body)):
-        if body[index].x == box.x and body[index].y == box.y:
+    for index in range(len(bodies)):
+        if bodies[index].x == box.x and bodies[index].y == box.y:
             return index
     return -1
 
@@ -87,8 +93,8 @@ def eating_body():
 
     index = is_snake_body()
     if index > -1:
-        while len(body) > index:
-            tmp = body.pop()
+        while len(bodies) > index:
+            tmp = bodies.pop()
             play.all_sprites.remove(tmp)
             score -= 1
         display_score.words = "SCORE: %0.3d" % score
@@ -106,23 +112,29 @@ def do():
 async def move_box():
     """Асинхронная функция - перемещает голову и хвост
         """
-    current_pos = box.x, box.y
-    box.move(STEP)
-    eating_body()
-    n = 0
-    while len(body) > n:
-        current_pos = body_move(n, current_pos)
-        n += 1
+    if RUN:
+        current_pos = box.x, box.y
+        box.move(STEP)
+        eating_body()
+        n = 0
+        while len(bodies) > n:
+            current_pos = body_move(n, current_pos)
+            n += 1
 
-    if SHIFT:
-        await play.timer(seconds=0.01)
+        if SHIFT:
+            await play.timer(seconds=0.01)
+        else:
+            await play.timer(seconds=SPEED)
     else:
-        await play.timer(seconds=SPEED)
+        box.hide()
+        while len(bodies) > 0:
+            tmp = bodies.pop()
+            play.all_sprites.remove(tmp)
 
 
 @play.repeat_forever
 async def time_control():
-    global TIMER
+    global TIMER, RUN
 
     if TIMER > -1:
         minute = TIMER // 60
@@ -130,35 +142,36 @@ async def time_control():
         display_timer.words = "TIME: %0.2d:%0.2d" % (minute, seconds)
         TIMER -= 1
     else:
-        print("GameOver")
+        gameover.show()
+        RUN = False
 
     await play.timer(seconds=1)
 
-# ToDo Улучшить производительность функции
+
 def is_space_clear(x, y):
     """Проверяет по указанным координатам - занято метсто или свободно"""
-    clear_space = True
     for obj in play.all_sprites:
         if obj.x == x and obj.y == y:
-            clear_space = False
-    return clear_space
+            return False
+    return True
 
 
 @play.repeat_forever
 async def new_apple():
     """Добавляет яблоки на экран"""
-    x = play.random_number(lowest=-13, highest=26) * 30 + 5
-    y = play.random_number(lowest=-17, highest=9) * 30 + 15
-    while not is_space_clear(x, y):
-        x = play.random_number(lowest=-12, highest=26) * 30 + 5
-        y = play.random_number(lowest=-16, highest=9) * 30 + 15
+    if RUN:
+        x = play.random_number(lowest=-13, highest=26) * 30 + 5
+        y = play.random_number(lowest=-17, highest=9) * 30 + 15
+        while not is_space_clear(x, y):
+            x = play.random_number(lowest=-12, highest=26) * 30 + 5
+            y = play.random_number(lowest=-16, highest=9) * 30 + 15
 
-    apples.append(
-        play.new_image(
-            image='eat.png', x=x, y=y, angle=0, size=4, transparency=100)
-    )
+        apples.append(
+            play.new_image(
+                image='eat.png', x=x, y=y, angle=0, size=4, transparency=100)
+        )
 
-    await play.timer(seconds=5)
+        await play.timer(seconds=5)
 
 
 @play.repeat_forever
@@ -168,16 +181,21 @@ async def eat_control():
     """
     global score
 
-    for eat in apples:
-        if eat.is_touching(box):
-            score += 1
-            display_score.words = "SCORE: %0.3d" % score  # обновляем значение на экране
-            eat.hide()
-            apples.remove(eat)
-            play.all_sprites.remove(eat)
-            body_append()
+    if RUN:
+        for eat in apples:
+            if eat.is_touching(box):
+                score += 1
+                display_score.words = "SCORE: %0.3d" % score  # обновляем значение на экране
+                eat.hide()
+                apples.remove(eat)
+                play.all_sprites.remove(eat)
+                body_append()
 
-    await play.timer(seconds=SPEED/100)
+        await play.timer(seconds=SPEED/100)
+    else:
+        while len(apples) > 0:
+            tmp = apples.pop()
+            play.all_sprites.remove(tmp)
 
 
 @play.when_key_pressed('up', 'w', 'down', 's', 'right', 'd', 'left', 'a', 'enter')
