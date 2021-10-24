@@ -45,10 +45,7 @@ box = play.new_box(
         border_color="blue", border_width=2
     )
 
-
-gameover = play.new_image(
-        image='gameover.jpeg', x=200, y=-150, angle=0, size=80, transparency=100)
-gameover.hide()
+gameover = None
 
 # Спрайты в списке - тело
 bodies = []
@@ -104,7 +101,12 @@ def eating_body():
 @play.when_program_starts
 def do():
     """Стартовые настройки - рисуем сетку"""
+    global gameover
+
     net(STEP)
+    gameover = play.new_image(
+        image='gameover.jpeg', x=200, y=-150, angle=0, size=80, transparency=100)
+    gameover.hide()
 
 
 # Блок который работает в цикле - т.е. постоянно повторяется
