@@ -12,10 +12,19 @@ pygame.display.set_mode((WIN_X, WIN_Y))
 lines = []  # переменная список для линий сетки
 STEP = 30  # шаг сетки в пикселях
 SPEED = 0.5  # пауза меньше = скорость выше, пауза больше = скорость меньше
-SHIFT = 0  # ускорение
-score = 0  # для подсчета очков
-TIMER = 0.5 * 60  # 5 min
-RUN = True  # переменная состояние игры
+
+# ToDo Добавить звуковые эффекты
+
+def start():
+    global RUN, TIMER, score, SHIFT
+
+    SHIFT = 0  # ускорение
+    score = 0  # для подсчета очков
+    TIMER = 0.5 * 60  # 5 min
+    RUN = True  # переменная состояние игры
+
+
+start()
 
 def net(step):
     """ Рисуем сетку для игры c шагом step"""
@@ -100,7 +109,7 @@ def eating_body():
 # Блок который работает один раз на старте и не повторяется
 @play.when_program_starts
 def do():
-    """Стартовые настройки - рисуем сетку"""
+    """Стартовые настройки - рисуем сетку, создаем и прячем геймовер"""
     global gameover
 
     net(STEP)
@@ -109,14 +118,27 @@ def do():
     gameover.hide()
 
 
+def check_out():
+    """Проверяет выход box за рамку"""
+    min_x, max_x = -385, 790
+    min_y, max_y = -495, 285
+    if box.x > max_x or box.x < min_x or box.y > max_y or box.y < min_y:
+        return True
+    return False
+
 # Блок который работает в цикле - т.е. постоянно повторяется
 @play.repeat_forever
 async def move_box():
     """Асинхронная функция - перемещает голову и хвост
         """
+    global RUN
+
     if RUN:
         current_pos = box.x, box.y
         box.move(STEP)
+        if check_out():
+            gameover.show()
+            RUN = False
         eating_body()
         n = 0
         while len(bodies) > n:
@@ -153,7 +175,7 @@ async def time_control():
 def is_space_clear(x, y):
     """Проверяет по указанным координатам - занято метсто или свободно"""
     for obj in play.all_sprites:
-        if obj.x == x and obj.y == y:
+        if abs(obj.x - x) < 5 and abs(obj.y - y) < 5:
             return False
     return True
 
@@ -165,15 +187,15 @@ async def new_apple():
         x = play.random_number(lowest=-13, highest=26) * 30 + 5
         y = play.random_number(lowest=-17, highest=9) * 30 + 15
         while not is_space_clear(x, y):
-            x = play.random_number(lowest=-12, highest=26) * 30 + 5
-            y = play.random_number(lowest=-16, highest=9) * 30 + 15
+            x = play.random_number(lowest=-13, highest=26) * 30 + 5
+            y = play.random_number(lowest=-17, highest=9) * 30 + 15
 
         apples.append(
             play.new_image(
                 image='eat.png', x=x, y=y, angle=0, size=4, transparency=100)
         )
 
-        await play.timer(seconds=5)
+        await play.timer(seconds=0.05)
 
 
 @play.repeat_forever
@@ -218,5 +240,17 @@ async def control(key):
         SHIFT = 0
 
     await play.timer(seconds=0.001)
+
+
+@play.mouse.when_clicked
+def restart():
+    if not RUN:
+        start()
+        box.x = 6
+        box.y = 15
+        box.angle = 0
+        box.show()
+        display_score.words = "SCORE: %0.3d" % score
+        gameover.hide()
 
 play.start_program()

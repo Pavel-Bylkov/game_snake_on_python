@@ -1,6 +1,4 @@
 a = 20
-expr = "start"
-while expr != "":
-    expr = input("> ")
-    if expr != "":
-        print("= ", eval(expr))
+b = 33
+op = "+"
+print(eval(str(a)+op+str(b)))
