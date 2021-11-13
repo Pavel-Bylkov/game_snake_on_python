@@ -13,6 +13,13 @@ lines = []  # переменная список для линий сетки
 STEP = 30  # шаг сетки в пикселях
 SPEED = 0.5  # пауза меньше = скорость выше, пауза больше = скорость меньше
 
+pygame.mixer.init()
+# Фоновая музыка - загружаем мелодию
+pygame.mixer.music.load("43921.mp3")
+# Эффекты - создаем переменную с эффектом
+eat_sound = pygame.mixer.Sound("Bite.wav")
+
+
 # ToDo Добавить звуковые эффекты
 
 def start():
@@ -116,6 +123,8 @@ def do():
     gameover = play.new_image(
         image='gameover.jpeg', x=200, y=-150, angle=0, size=80, transparency=100)
     gameover.hide()
+    # включаем фоновую мелодию
+    pygame.mixer.music.play()
 
 
 def check_out():
