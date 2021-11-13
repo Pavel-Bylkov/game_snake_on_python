@@ -16,11 +16,14 @@ SPEED = 0.5  # пауза меньше = скорость выше, пауза �
 pygame.mixer.init()
 # Фоновая музыка - загружаем мелодию
 pygame.mixer.music.load("43921.mp3")
+pygame.mixer.music.set_volume(0.2)
 # Эффекты - создаем переменную с эффектом
 eat_sound = pygame.mixer.Sound("Bite.wav")
+eat_sound.set_volume(0.5)
 
+# ToDo Заменить голову и тело на картинки
+# Todo Сделать exe файл
 
-# ToDo Добавить звуковые эффекты
 
 def start():
     global RUN, TIMER, score, SHIFT
@@ -29,9 +32,12 @@ def start():
     score = 0  # для подсчета очков
     TIMER = 0.5 * 60  # 5 min
     RUN = True  # переменная состояние игры
+    # включаем фоновую мелодию
+    pygame.mixer.music.play()
 
 
 start()
+
 
 def net(step):
     """ Рисуем сетку для игры c шагом step"""
@@ -113,6 +119,15 @@ def eating_body():
         display_score.words = "SCORE: %0.3d" % score
 
 
+def gameover_run():
+    global RUN
+    # выключаем фоновую мелодию
+    pygame.mixer.music.stop()
+    gameover.show()
+    RUN = False
+
+
+
 # Блок который работает один раз на старте и не повторяется
 @play.when_program_starts
 def do():
@@ -123,8 +138,6 @@ def do():
     gameover = play.new_image(
         image='gameover.jpeg', x=200, y=-150, angle=0, size=80, transparency=100)
     gameover.hide()
-    # включаем фоновую мелодию
-    pygame.mixer.music.play()
 
 
 def check_out():
@@ -146,8 +159,7 @@ async def move_box():
         current_pos = box.x, box.y
         box.move(STEP)
         if check_out():
-            gameover.show()
-            RUN = False
+            gameover_run()
         eating_body()
         n = 0
         while len(bodies) > n:
@@ -175,8 +187,7 @@ async def time_control():
         display_timer.words = "TIME: %0.2d:%0.2d" % (minute, seconds)
         TIMER -= 1
     else:
-        gameover.show()
-        RUN = False
+        gameover_run()
 
     await play.timer(seconds=1)
 
@@ -184,7 +195,7 @@ async def time_control():
 def is_space_clear(x, y):
     """Проверяет по указанным координатам - занято метсто или свободно"""
     for obj in play.all_sprites:
-        if abs(obj.x - x) < 5 and abs(obj.y - y) < 5:
+        if abs(obj.x - x) < 10 and abs(obj.y - y) < 10:
             return False
     return True
 
@@ -217,6 +228,7 @@ async def eat_control():
     if RUN:
         for eat in apples:
             if eat.is_touching(box):
+                eat_sound.play()
                 score += 1
                 display_score.words = "SCORE: %0.3d" % score  # обновляем значение на экране
                 eat.hide()
